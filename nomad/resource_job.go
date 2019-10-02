@@ -336,11 +336,24 @@ func deploymentStateRefreshFunc(client *api.Client, initialEvalId string) resour
 		} else {
 			// monitor the deployment
 			deployment, _, err := client.Deployments().Info(deploymentId, nil)
+			
 			if err != nil {
 				log.Printf("[ERROR] error on Deployment.Info during deploymentStateRefresh: %s", err)
 				return nil, "", err
 			}
+			
 			switch deployment.Status {
+			case "running":
+				var healthy bool = true 
+				for _, k := range deployment.TaskGroups { 
+					healthy = healthy && (k.HealthyAllocs == k.PlacedAllocs)
+				}
+				if  healthy == true {
+					log.Printf("[DEBUG] deployment '%s' successful", deployment.ID)
+					state = "deployment_successful"	
+				} else {
+					state = "monitoring_deployment"	
+				}
 			case "successful":
 				log.Printf("[DEBUG] deployment '%s' successful", deployment.ID)
 				state = "deployment_successful"
