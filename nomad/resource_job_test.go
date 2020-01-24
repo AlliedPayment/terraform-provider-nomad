@@ -622,6 +622,7 @@ func testResourceJob_v086Check(s *terraform.State) error {
       "HealthyDeadline":  360000000000,
       "ProgressDeadline": 720000000000,
       "AutoRevert": true,
+      "AutoPromote": false,
       "Canary": 1
     }`), &expUpdate)
 	if !reflect.DeepEqual(tg.Update, &expUpdate) {
@@ -736,6 +737,11 @@ func testResourceJob_v090Check(s *terraform.State) error {
 		return fmt.Errorf("job spreads not as expected")
 	}
 
+	// 0.9.2 jobs support auto_promote in the update stanza
+	if exp := job.TaskGroups[0].Update.AutoPromote; exp == nil || *exp != true {
+		return fmt.Errorf("group auto_promote not as expected")
+	}
+
 	return nil
 }
 
@@ -783,9 +789,7 @@ func testResourceJob_volumesCheck(s *terraform.State) error {
 			"Name": "data",
 			"Type": "host",
 			"ReadOnly": true,
-			"Config": {
-				"source": "data"
-			}
+			"Source": "data"
 		}
 	}`), &expVolumes)
 	if diff := cmp.Diff(expVolumes, taskGroup.Volumes); diff != "" {
@@ -1253,6 +1257,7 @@ resource "nomad_job" "test" {
 				healthy_deadline = "6m"
 				progress_deadline = "11m"
 				auto_revert = true
+				auto_promote = true
 				canary = 1
 			}
 
@@ -1339,9 +1344,7 @@ resource "nomad_job" "test" {
 			volume "data" {
 				type = "host"
 				read_only = true
-				config {
-					source = "data"
-				}
+				source = "data"
 			}
 
 			task "foo" {
